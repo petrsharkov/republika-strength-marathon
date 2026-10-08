@@ -1,0 +1,4 @@
+import {getRawDb} from '@/db';
+import {fail,isAdmin,sameOrigin} from '@/lib/server';
+export async function GET(req:Request){try{if(!await isAdmin(req))return Response.json({error:'Войдите в кабинет'},{status:401});const rows=await getRawDb().prepare('SELECT * FROM participants ORDER BY created_at ASC, id ASC').all();return Response.json({participants:rows.results},{headers:{'Cache-Control':'no-store'}});}catch(e){return fail(e);}}
+export async function POST(req:Request){try{if(!sameOrigin(req)||!await isAdmin(req))return Response.json({error:'Войдите в кабинет'},{status:401});const id=crypto.randomUUID(),now=new Date().toISOString();await getRawDb().prepare('INSERT INTO participants (id,source,created_at,updated_at) VALUES (?,?,?,?)').bind(id,'manual',now,now).run();return Response.json({participant:await getRawDb().prepare('SELECT * FROM participants WHERE id = ?').bind(id).first()});}catch(e){return fail(e);}}
