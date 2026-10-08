@@ -116,11 +116,14 @@ jobs:
           [[ "$port" =~ ^[0-9]+$ ]] && (( port > 0 && port <= 65535 ))
           ssh_args=(-i "$HOME/.ssh/deploy_key" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20)
           target="$DEPLOY_USER@$DEPLOY_HOST"
-          remote_dir="republika-deploy/incoming-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          remote_dir="republika-deploy"
           ssh "${ssh_args[@]}" -p "$port" "$target" "mkdir -p ~/$remote_dir"
-          scp "${ssh_args[@]}" -P "$port" marathon-image.tar.gz deploy/deploy.sh "$target:$remote_dir/"
-          ssh "${ssh_args[@]}" -p "$port" "$target" "bash ~/$remote_dir/deploy.sh '$GITHUB_SHA' ~/$remote_dir/marathon-image.tar.gz"
-          ssh "${ssh_args[@]}" -p "$port" "$target" "rm -f ~/$remote_dir/marathon-image.tar.gz ~/$remote_dir/deploy.sh; rmdir ~/$remote_dir"
+          scp "${ssh_args[@]}" -P "$port" deploy/deploy.sh deploy/cleanup.sh "$target:$remote_dir/"
+          # Clean existing accumulation before loading the new image.
+          ssh "${ssh_args[@]}" -p "$port" "$target" "bash ~/$remote_dir/cleanup.sh"
+          # Stream directly into Docker; no second image archive on the VPS.
+          ssh "${ssh_args[@]}" -p "$port" "$target" 'docker load' < marathon-image.tar.gz
+          ssh "${ssh_args[@]}" -p "$port" "$target" "bash ~/$remote_dir/deploy.sh '$GITHUB_SHA' -"
           echo "Deployed commit $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
       - name: Remove SSH credentials
         if: always()

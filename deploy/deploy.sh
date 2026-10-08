@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 commit=${1:?Commit SHA required}
-archive=${2:?Image archive required}
+archive=${2:--}
 [[ "$commit" =~ ^[0-9a-f]{40}$ ]] || exit 2
 command -v docker >/dev/null
 command -v flock >/dev/null
@@ -13,8 +13,20 @@ name=republika-marathon
 volume=republika-marathon-data
 candidate=republika-marathon-candidate
 previous=republika-marathon-previous
+cleanup_script="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/cleanup.sh"
+finish() {
+  local status=$?
+  docker rm -f "$candidate" >/dev/null 2>&1 || true
+  if [[ "$archive" != - ]]; then rm -f -- "$archive"; fi
+  if ! bash "$cleanup_script" --locked; then
+    echo 'Storage cleanup failed; inspect the log and retry cleanup.sh.' >&2
+  fi
+  exit "$status"
+}
+trap finish EXIT
 docker volume create "$volume" >/dev/null
-gzip -dc "$archive" | docker load
+if [[ "$archive" != - ]]; then gzip -dc "$archive" | docker load; fi
+docker image inspect "$image" >/dev/null
 
 wait_healthy() {
   local container=$1 status
@@ -41,7 +53,8 @@ if docker inspect "$name" >/dev/null 2>&1; then
     }'
 fi
 docker rm -f "$candidate" >/dev/null 2>&1 || true
-docker run -d --name "$candidate" --mount "source=$volume,target=/data" "$image" >/dev/null
+docker run -d --name "$candidate" --log-opt max-size=10m --log-opt max-file=3 \
+  --mount "source=$volume,target=/data" "$image" >/dev/null
 if ! wait_healthy "$candidate"; then
   docker rm -f "$candidate" >/dev/null
   echo 'New version failed; current container was left running.' >&2
