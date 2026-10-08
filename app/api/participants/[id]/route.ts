@@ -7,3 +7,12 @@ export async function PATCH(req:Request,ctx:{params:Promise<{id:string}>}){try{
  const result=await getRawDb().prepare(`UPDATE participants SET ${entries.map(([k])=>fields[k]+' = ?').join(', ')}, updated_at = ?, field_times = json_set(field_times, ?, ?) WHERE id = ? AND COALESCE(json_extract(field_times, ?), 0) <= ?`).bind(...values,new Date().toISOString(),'$.'+entries[0][0],stamp,id,'$.'+entries[0][0],stamp).run();
  if(!result.meta.changes){const exists=await getRawDb().prepare('SELECT id FROM participants WHERE id = ?').bind(id).first();if(!exists)return Response.json({error:'Участник не найден'},{status:404});}return Response.json({ok:true});
  }catch(e){if(e instanceof Error&&e.message==='invalid')return Response.json({error:'Проверьте данные: вес и время заплыва больше нуля, повторы — целое число от 0 до 1000.'},{status:400});return fail(e);}}
+
+export async function DELETE(req:Request,ctx:{params:Promise<{id:string}>}){
+ try{
+  if(!sameOrigin(req)||!await isAdmin(req))return Response.json({error:'Войдите в кабинет'},{status:401});
+  const {id}=await ctx.params;
+  await getRawDb().prepare('DELETE FROM participants WHERE id = ?').bind(id).run();
+  return Response.json({ok:true},{headers:{'Cache-Control':'no-store'}});
+ }catch(e){return fail(e);}
+}
