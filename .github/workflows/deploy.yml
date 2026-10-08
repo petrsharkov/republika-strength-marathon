@@ -30,6 +30,62 @@ jobs:
           fi
       - uses: actions/checkout@v4
         if: steps.config.outputs.ready == 'true'
+      - name: Prepare and verify SSH access
+        if: steps.config.outputs.ready == 'true'
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_PASSPHRASE: ${{ secrets.DEPLOY_SSH_PASSPHRASE }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          port=${DEPLOY_PORT:-22}
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.-]+$ ]] || { echo "::error::DEPLOY_HOST must be an IP or hostname."; exit 1; }
+          [[ "$DEPLOY_USER" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]] || { echo "::error::Check DEPLOY_USER."; exit 1; }
+          [[ "$port" =~ ^[0-9]+$ ]] && (( port > 0 && port <= 65535 )) || { echo "::error::Check DEPLOY_PORT."; exit 1; }
+          install -d -m 700 "$HOME/.ssh"
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          directory = Path.home() / ".ssh"
+          key = os.environ["DEPLOY_SSH_KEY"].strip().replace("\r\n", "\n").replace("\r", "\n")
+          if "\n" not in key and "\\n" in key:
+              key = key.replace("\\n", "\n")
+          if not key.startswith("-----BEGIN ") or "PRIVATE KEY-----" not in key:
+              raise SystemExit("::error::DEPLOY_SSH_KEY must contain the complete PRIVATE key, not a password or public key.")
+          (directory / "deploy_key").write_text(key + "\n")
+          hosts = os.environ["DEPLOY_KNOWN_HOSTS"].replace("\r\n", "\n").replace("\r", "\n")
+          (directory / "known_hosts").write_text(hosts.strip() + "\n")
+          PY
+          chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
+          eval "$(ssh-agent -s)" >/dev/null
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          askpass="$RUNNER_TEMP/republika-askpass"
+          printf '%s\n' '#!/bin/sh' 'printf "%s\n" "$DEPLOY_SSH_PASSPHRASE"' > "$askpass"
+          chmod 700 "$askpass"
+          export SSH_ASKPASS="$askpass" SSH_ASKPASS_REQUIRE=force DISPLAY=:0
+          if ! ssh-add "$HOME/.ssh/deploy_key" </dev/null 2>"$RUNNER_TEMP/ssh-key-error"; then
+            echo "::error::Cannot load SSH key. Check DEPLOY_SSH_KEY; for an encrypted key set DEPLOY_SSH_PASSPHRASE."
+            exit 1
+          fi
+          ssh-add -L > "$HOME/.ssh/deploy_key.pub"
+          rm -f "$askpass" "$RUNNER_TEMP/ssh-key-error"
+          ssh_args=(-i "$HOME/.ssh/deploy_key" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20)
+          if ! ssh "${ssh_args[@]}" -p "$port" "$DEPLOY_USER@$DEPLOY_HOST" true 2>"$RUNNER_TEMP/ssh-error"; then
+            if grep -q "Permission denied" "$RUNNER_TEMP/ssh-error"; then
+              echo "::error::Server rejected the SSH key. Verify DEPLOY_USER and install the matching PUBLIC key in that user's ~/.ssh/authorized_keys. Also check server SSH policy."
+            elif grep -q -E "Host key verification failed|REMOTE HOST IDENTIFICATION" "$RUNNER_TEMP/ssh-error"; then
+              echo "::error::DEPLOY_KNOWN_HOSTS does not match the server host key. Verify it in the provider console."
+            else
+              echo "::error::SSH connection failed. Check DEPLOY_HOST, DEPLOY_PORT, firewall and server availability."
+            fi
+            exit 1
+          fi
+          rm -f "$RUNNER_TEMP/ssh-error"
+          ssh "${ssh_args[@]}" -p "$port" "$DEPLOY_USER@$DEPLOY_HOST" 'command -v docker >/dev/null && docker info >/dev/null && command -v flock >/dev/null'
       - name: Build and check container
         if: steps.config.outputs.ready == 'true'
         run: |
@@ -58,12 +114,7 @@ jobs:
           [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.-]+$ ]]
           [[ "$DEPLOY_USER" =~ ^[a-zA-Z_][a-zA-Z0-9_-]*$ ]]
           [[ "$port" =~ ^[0-9]+$ ]] && (( port > 0 && port <= 65535 ))
-          install -d -m 700 "$HOME/.ssh"
-          printf '%s\n' "$DEPLOY_SSH_KEY" > "$HOME/.ssh/deploy_key"
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
-          chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
-          trap 'rm -f "$HOME/.ssh/deploy_key"' EXIT
-          ssh_args=(-i "$HOME/.ssh/deploy_key" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20)
+          ssh_args=(-i "$HOME/.ssh/deploy_key" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20)
           target="$DEPLOY_USER@$DEPLOY_HOST"
           remote_dir="republika-deploy/incoming-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           ssh "${ssh_args[@]}" -p "$port" "$target" "mkdir -p ~/$remote_dir"
@@ -71,3 +122,8 @@ jobs:
           ssh "${ssh_args[@]}" -p "$port" "$target" "bash ~/$remote_dir/deploy.sh '$GITHUB_SHA' ~/$remote_dir/marathon-image.tar.gz"
           ssh "${ssh_args[@]}" -p "$port" "$target" "rm -f ~/$remote_dir/marathon-image.tar.gz ~/$remote_dir/deploy.sh; rmdir ~/$remote_dir"
           echo "Deployed commit $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove SSH credentials
+        if: always()
+        run: |
+          if [[ -n "${SSH_AGENT_PID:-}" ]]; then ssh-agent -k >/dev/null || true; fi
+          rm -f "$HOME/.ssh/deploy_key" "$HOME/.ssh/deploy_key.pub" "$RUNNER_TEMP/republika-askpass" "$RUNNER_TEMP/ssh-key-error" "$RUNNER_TEMP/ssh-error"
