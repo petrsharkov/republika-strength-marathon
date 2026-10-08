@@ -1,0 +1,14 @@
+{
+  "id": "/",
+  "name": "Республика · Спортивный марафон",
+  "short_name": "Республика",
+  "lang": "ru",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fcf9f5",
+  "theme_color": "#70432d",
+  "icons": [
+    {"src": "/republika-icon-brown.png", "sizes": "1254x1254", "type": "image/png", "purpose": "any"}
+  ]
+}
