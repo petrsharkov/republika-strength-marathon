@@ -22,3 +22,26 @@
 @media(max-width:640px){.discipline-grid{grid-template-columns:1fr}.discipline{border-right:0}}
 
 .exercise-accordion{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}.exercise-accordion .exercise-card{border:1px solid var(--border);border-radius:4px;background:#fcf9f5;overflow:hidden}.exercise-trigger{padding:26px 24px;align-items:center;color:#3b2b22}.exercise-trigger:hover{text-decoration:none;background:#f0e7dc}.exercise-trigger>svg{flex-shrink:0;width:22px;height:22px;color:#70432d}.exercise-heading{position:relative;display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:143px;padding-top:4px}.exercise-number{position:absolute;right:0;top:0;font-size:42px;line-height:1;font-weight:700;letter-spacing:-2px;color:#e4d8c9}.exercise-heading>svg{color:#95633e;margin-bottom:25px}.exercise-name{font-size:22px;font-weight:700;line-height:1.25;padding-right:4px}.exercise-hint{font-size:13px;font-weight:400;color:#8a715d;margin-top:12px}.exercise-content{padding:0 24px 24px;font-size:15px;line-height:1.6;color:#77685d}.exercise-content .discipline-record{margin-top:18px}@media(max-width:850px){.exercise-accordion{grid-template-columns:1fr}.exercise-heading{min-height:0;padding-left:42px}.exercise-heading>svg{position:absolute;left:0;top:4px;margin:0}.exercise-number{display:none}.exercise-name{font-size:21px}.exercise-trigger{padding:22px 24px}.exercise-content{padding:0 24px 24px}}
+
+/* Larger club photograph and a dedicated dynamometer photograph. */
+.hero{min-height:740px}
+.hero-photo{background-image:linear-gradient(90deg,#2e211bf0 0%,#2e211bb8 38%,#2e211b20 72%,#2e211b10),linear-gradient(0deg,#291d1870,transparent 50%),url('/club-gym.jpg');background-position:center 45%}
+.hero-inner{padding-top:110px;padding-bottom:90px}
+.exercise-accordion{grid-template-columns:repeat(2,minmax(0,1fr))}
+.exercise-accordion .grip-card{background:#30211b}
+.grip-card .exercise-trigger{min-height:340px;align-items:flex-end;background:linear-gradient(0deg,#211711f2 0%,#21171160 45%,transparent 75%),url('/grip-dynamometer.jpg') center 53%/cover;color:#fff9f0}
+.grip-card .exercise-trigger:hover{background:linear-gradient(0deg,#211711f2 0%,#21171160 45%,transparent 75%),url('/grip-dynamometer.jpg') center 53%/cover}
+.grip-card .exercise-heading{min-height:0;padding-top:0}
+.grip-card .exercise-heading>svg{display:none}
+.grip-card .exercise-number{color:#ffffff60}
+.grip-card .exercise-hint,.grip-card .exercise-trigger>svg{color:#edd5be}
+.grip-card .exercise-content,.grip-card .discipline-rules{color:#f0e3d7}
+@media(max-width:640px){
+ .hero{min-height:0}
+ .hero-photo{background-image:linear-gradient(0deg,#34251c 0%,#34251c00 45%),url('/club-gym.jpg');background-size:100% 350px,auto 350px;background-repeat:no-repeat;background-position:center top;background-color:#34251c}
+ .hero-inner{padding-top:330px;padding-bottom:40px}
+ .hero h1{font-size:clamp(38px,10.5vw,60px)}
+ .exercise-accordion{grid-template-columns:1fr}
+ .grip-card .exercise-trigger{min-height:360px}
+ .grip-card .exercise-heading{padding-left:0}
+}
