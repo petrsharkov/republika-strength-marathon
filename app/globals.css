@@ -28,26 +28,20 @@
 .hero-photo{background-image:linear-gradient(90deg,#2e211bf0 0%,#2e211bb8 38%,#2e211b20 72%,#2e211b10),linear-gradient(0deg,#291d1870,transparent 50%),url('/club-gym.jpg');background-position:center 45%}
 .hero-inner{padding-top:110px;padding-bottom:90px}
 .exercise-accordion{grid-template-columns:repeat(2,minmax(0,1fr))}
-.exercise-accordion .photo-card{background:#30211b}
-.photo-card .exercise-trigger{min-height:227px;align-items:flex-end;background:linear-gradient(0deg,#211711f2 0%,#21171160 45%,transparent 75%),var(--discipline-photo) center var(--photo-position,50%)/cover;color:#fff9f0}
-.photo-card .exercise-trigger:hover{background:linear-gradient(0deg,#211711f2 0%,#21171160 45%,transparent 75%),var(--discipline-photo) center var(--photo-position,50%)/cover}
-.photo-card .exercise-heading{min-height:0;padding-top:0}
-.photo-card .exercise-heading>svg{display:none}
-.photo-card .exercise-number{color:#ffffff60}
-.photo-card .exercise-hint,.photo-card .exercise-trigger>svg{color:#edd5be}
-.photo-card .exercise-content,.photo-card .discipline-rules{color:#f0e3d7}
 @media(max-width:640px){
  .hero{min-height:0}
  .hero-photo{background-image:linear-gradient(0deg,#34251c 0%,#34251c00 45%),url('/club-gym.jpg');background-size:100% 350px,auto 350px;background-repeat:no-repeat;background-position:center top;background-color:#34251c}
  .hero-inner{padding-top:330px;padding-bottom:40px}
  .hero h1{font-size:clamp(38px,10.5vw,60px)}
  .exercise-accordion{grid-template-columns:1fr}
- .photo-card .exercise-trigger{min-height:240px}
- .photo-card .exercise-heading{padding-left:0}
 }
 
 /* Compact competition dates and photographs. */
 .dates{display:block;padding:20px 0;text-align:center}
 .date-line{white-space:nowrap;font-size:clamp(19px,5.3vw,32px);font-weight:700;letter-spacing:.3px;color:#493328}
-.grip-card{--discipline-photo:url('/grip-dynamometer.jpg');--photo-position:53%}
-.pool-card{--discipline-photo:url('/club-pool.jpg');--photo-position:50%}
+/* Photographs appear only inside the expanded discipline. */
+.exercise-heading{min-height:0;padding:0}
+.exercise-heading>svg,.exercise-number,.exercise-hint{display:none}
+.exercise-trigger{padding:22px 24px}
+.discipline-photo{display:block;width:100%;height:227px;object-fit:cover;margin:0 0 20px;border-radius:3px}
+@media(max-width:640px){.discipline-photo{height:240px}}
