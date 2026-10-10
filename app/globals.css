@@ -86,4 +86,15 @@
 .discipline-results-table .result-value{font-weight:700}
 .discipline-results-table .result-value small{font-size:12px;font-weight:400;color:#74665c}
 .results-unknown{margin-top:16px;font-size:13px;color:#74665c}
+.results-edit-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.inline-save-status{font-size:12px;color:#74665c}
+.inline-save-status button{border:0;background:none;color:#a13629;text-decoration:underline;cursor:pointer}
+.results-login-form{padding:16px;background:#ede4d8;border:1px solid var(--border);border-radius:4px;margin-bottom:18px}
+.results-login-form label{display:block;font-size:14px;margin-bottom:8px}
+.results-login-form>div{display:flex;gap:8px}
+.results-login-form input{min-width:0;width:100%;height:42px;background:#fff;border:1px solid var(--border);border-radius:3px;padding:0 10px;font-size:16px}
+.inline-result-input{width:100%;min-width:0;height:40px;padding:0 6px;text-align:center;border:1px solid #bba08a;border-radius:3px;background:white;color:#35251e;font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.inline-result-input:focus{outline:2px solid var(--ring);outline-offset:1px}
+.inline-result-input[aria-invalid=true]{border-color:#a13629;background:#fff3f0}
+.results-unit{display:block;font-size:11px;font-weight:400;color:#74665c}
 @media(max-width:640px){.public-results-page .container{width:calc(100% - 28px)}.public-results-page .admin-title h1{font-size:27px}.public-results-page .admin-title{margin-bottom:20px}.discipline-results-table .place-column{width:32px}.discipline-results-table .value-column{width:92px}.discipline-results-table th,.discipline-results-table td{padding:12px 7px}.discipline-results-table th{font-size:12px}.discipline-results-table{font-size:15px}.discipline-result-title h2{font-size:22px}}
