@@ -39,6 +39,14 @@
 /* Compact competition dates and photographs. */
 .dates{display:block;padding:20px 0;text-align:center}
 .date-line{white-space:nowrap;font-size:clamp(19px,5.3vw,32px);font-weight:700;letter-spacing:.3px;color:#493328}
+.cup-prizes{padding:24px 0 0;text-align:center}
+.cup-prizes h2{font-size:25px;letter-spacing:-.4px;margin-bottom:16px}
+.prize-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:720px;margin:0 auto}
+.prize-card{padding:18px 12px;background:#fffdfa;border:1px solid var(--border);border-radius:4px}
+.prize-card span{display:block;font-size:14px;color:#74665c;margin-bottom:4px}
+.prize-card strong{display:block;font-size:32px;color:#70432d;line-height:1.25}
+.cup-prizes>p{font-size:14px;color:#74665c;margin:14px auto 0;max-width:600px}
+@media(max-width:640px){.cup-prizes{padding-top:20px}.cup-prizes h2{font-size:22px}.prize-grid{gap:8px}.prize-card{padding:14px 4px}.prize-card strong{font-size:clamp(19px,5.4vw,26px)}.prize-card span,.cup-prizes>p{font-size:13px}}
 /* Photographs appear only inside the expanded discipline. */
 .exercise-heading{min-height:0;padding:0}
 .exercise-heading>svg,.exercise-number,.exercise-hint{display:none}
