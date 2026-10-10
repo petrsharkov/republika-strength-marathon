@@ -6,7 +6,66 @@ import {Label} from '@/components/ui/label';
 import {Accordion,AccordionItem,AccordionTrigger,AccordionContent} from '@/components/ui/accordion';
 import {Dumbbell,MapPin,Check,LockKeyhole,Trophy,LoaderCircle} from 'lucide-react';
 import Link from 'next/link';
+import {disciplineRows,type Gender,type ResultParticipant,type ResultField} from '@/lib/results';
 export function Brand(){return <Link href="/" className="brand"><span>РЕПАБЛИКА<span className="brand-dot">.</span></span><small>ФИТНЕС · НОВОГОРСК</small></Link>;}
+
+type OverallRow={participant:ResultParticipant;points:number[];total:number;completed:number;place:number|null};
+function overallRows(participants:ResultParticipant[],gender:Gender):OverallRow[]{
+ const fields:ResultField[]=['bench',gender==='male'?'pullups':'pushups','swim_seconds','grip_kg'];
+ const category=participants.filter(p=>p.gender===gender);
+ const penalty=category.length+1;
+ const ranks=fields.map(field=>new Map(disciplineRows(participants,gender,field).map(row=>[row.participant.id,row.rank??penalty])));
+ const rows=category.map(participant=>{
+  const points=ranks.map(r=>r.get(participant.id)??penalty);
+  return {participant,points,total:points.reduce((a,b)=>a+b,0),completed:fields.filter(field=>participant[field]!==null&&participant[field]!==undefined).length,place:null as number|null};
+ }).sort((a,b)=>Number(b.completed>0)-Number(a.completed>0)||a.total-b.total||([a.participant.last_name,a.participant.first_name].join(' ').localeCompare([b.participant.last_name,b.participant.first_name].join(' '),'ru'))||a.participant.id.localeCompare(b.participant.id));
+ let previous:number|null=null,place=0;
+ return rows.map((row,index)=>{
+  if(row.completed){if(previous!==row.total)place=index+1;previous=row.total;row.place=place;}
+  return row;
+ });
+}
+function OverallStandings(){
+ const [participants,setParticipants]=useState<ResultParticipant[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState('');
+ useEffect(()=>{
+  let cancelled=false,running=false;const controller=new AbortController();
+  async function load(){
+   if(running||document.hidden)return;running=true;
+   try{const response=await fetch('/api/results',{cache:'no-store',signal:controller.signal});const data=await response.json() as {participants:ResultParticipant[];error?:string};if(!response.ok)throw Error(data.error||'Не удалось загрузить общий зачёт');if(!cancelled){setParticipants(data.participants);setError('');}}
+   catch(e){if(!cancelled)setError(e instanceof Error?e.message:'Не удалось загрузить общий зачёт');}
+   finally{running=false;if(!cancelled)setLoading(false);}
+  }
+  void load();const timer=window.setInterval(()=>{void load();},15000);const visible=()=>{if(!document.hidden)void load();};document.addEventListener('visibilitychange',visible);
+  return()=>{cancelled=true;controller.abort();window.clearInterval(timer);document.removeEventListener('visibilitychange',visible);};
+ },[]);
+ return <section className="overall-standings container" id="overall-results" aria-labelledby="overall-title">
+  <p className="eyebrow">ОБЩИЙ ЗАЧЁТ КУБКА</p><h2 id="overall-title">Распределение по местам</h2>
+  <p className="overall-intro">Меньше сумма баллов — выше место. Результаты обновляются автоматически.</p>
+  {error&&<p className="error" role="alert">{error}</p>}
+  {loading?<div className="overall-loading" role="status"><LoaderCircle className="spin" size={20}/>Загружаем общий зачёт…</div>:(['male','female'] as const).map(gender=>{
+   const rows=overallRows(participants,gender);
+   const disciplines:{field:ResultField;title:string;unit:string}[]=[{field:'bench',title:'Жим лёжа',unit:'раз'},{field:gender==='male'?'pullups':'pushups',title:gender==='male'?'Подтягивания':'Отжимания',unit:'раз'},{field:'swim_seconds',title:'Плавание 50 м',unit:'с'},{field:'grip_kg',title:'Кистевая сила',unit:'кг'}];
+   return <div className="overall-category" key={gender}><div className="overall-category-heading"><h3>{gender==='male'?'Мужчины':'Женщины'}</h3><span>{rows.length} участников</span></div>
+    <div className="overall-table-scroll" tabIndex={0} role="region" aria-label={gender==='male'?'Общий зачёт мужчин':'Общий зачёт женщин'}>
+    <table className="overall-table"><thead><tr><th scope="col">Место</th><th scope="col">Участник</th><th scope="col">Баллы</th>{disciplines.map(d=><th scope="col" key={d.field}>{d.title}<small>{d.unit}</small></th>)}</tr></thead>
+    <tbody>{rows.map(row=><tr key={row.participant.id} className={row.place!==null&&row.place<=3?'overall-podium overall-podium-'+row.place:''}>
+     <td><span className="overall-place">{row.place??'—'}</span></td>
+     <th scope="row" className="overall-name">{[row.participant.last_name,row.participant.first_name].filter(Boolean).join(' ')}<small>{row.completed?row.completed+' из 4 дисциплин':'Ожидает старта'}</small></th>
+     <td className="overall-total">{row.completed?row.total:'—'}</td>
+     {disciplines.map((d,index)=><td key={d.field}><span className="overall-value">{row.participant[d.field]===null||row.participant[d.field]===undefined?'—':row.participant[d.field]!.toLocaleString('ru-RU')}</span><small>{row.points[index]} балл.</small></td>)}
+    </tr>)}</tbody></table></div>
+    {!rows.length&&<p className="overall-empty">В этой категории пока нет участников.</p>}
+   </div>;
+  })}
+  <p className="overall-note">Баллы за дисциплину равны месту. За пропуск — число участников своей категории + 1. Одинаковая сумма баллов — одинаковое место. До первого результата место не присваивается.</p>
+  {participants.some(p=>!p.gender)&&<p className="overall-note">Участники без указанной категории появятся в зачёте после её выбора организатором.</p>}
+  <style>{`
+   .overall-standings{padding-top:60px;padding-bottom:64px}.overall-intro{margin:16px 0 30px;color:#78695e;font-size:16px;line-height:1.6}.overall-category{margin-top:28px;background:#fffdfa;border:1px solid #dcd2c5;border-radius:8px;overflow:hidden}.overall-category-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 26px;background:#493226;color:#fff9f1}.overall-category-heading h3{font-size:25px;font-weight:700;line-height:1.2}.overall-category-heading>span{font-size:14px;color:#ead4bf}.overall-table-scroll{overflow-x:auto}.overall-table-scroll:focus-visible{outline:2px solid #956942;outline-offset:-2px}.overall-table{border-collapse:collapse;width:100%;min-width:800px;text-align:left;font-size:16px}.overall-table th,.overall-table td{padding:18px 16px;border-bottom:1px solid #e8e0d6;vertical-align:middle}.overall-table thead th{background:#ede4d8;color:#543b2c;font-size:14px;font-weight:600;white-space:nowrap}.overall-table small{display:block;margin-top:5px;font-size:12px;line-height:1.5;font-weight:400;color:#8b7765}.overall-table th:first-child,.overall-table td:first-child{width:76px;text-align:center}.overall-name{min-width:195px;font-weight:600;line-height:1.5}.overall-total{font-size:22px;font-weight:700;color:#70432d}.overall-place{display:inline-flex;width:36px;height:36px;align-items:center;justify-content:center;font-weight:700;color:#70432d;background:#eee3d6;border-radius:50%}.overall-podium-1 .overall-place{background:#d6ad64;color:#382614}.overall-podium-2 .overall-place{background:#d5d6d8;color:#3b3b3b}.overall-podium-3 .overall-place{background:#caa07e;color:#432a18}.overall-podium-1{background:#fff9ed}.overall-value{font-weight:600;font-variant-numeric:tabular-nums}.overall-note{color:#877466;font-size:14px;line-height:1.7;margin-top:18px;max-width:1000px}.overall-empty{padding:28px 24px;color:#877466;font-size:16px}.overall-loading{display:flex;align-items:center;gap:10px;padding:26px 0;color:#78695e}.overall-table tbody tr:last-child>*{border-bottom:0}
+   @media(max-width:640px){.overall-standings{padding-top:40px;padding-bottom:44px}.overall-category-heading{padding:20px}.overall-category-heading h3{font-size:23px}.overall-table{min-width:760px}.overall-table th,.overall-table td{padding:16px 12px}.overall-name{min-width:180px}.overall-intro{margin-bottom:24px}.overall-category{margin-top:24px}}
+  `}</style>
+ </section>;
+}
+
 export default function Home(){
  const [success,setSuccess]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');const formRef=useRef<HTMLFormElement>(null);
  async function register(data:{lastName:string;firstName:string;phone:string;gender:'male'|'female'}){setBusy(true);setError('');try{const r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const b=await r.json() as {error?:string};if(!r.ok)throw Error(b.error);setSuccess(true);return {registered:true};}catch(e){setError(e instanceof Error?e.message:'Не удалось отправить заявку');throw e;}finally{setBusy(false);}}
@@ -35,6 +94,6 @@ export default function Home(){
   <li>За пропущенную дисциплину начисляем число участников своей категории плюс 1 балл. Например, если в категории 10 участников, за пропуск — 11 баллов.</li>
   <li>Баллы за все дисциплины суммируются. Побеждает участник с наименьшей суммой баллов — среди мужчин и среди женщин отдельно.</li>
  </ul></AccordionContent></AccordionItem></Accordion></div></section>
- <section className="registration-section" id="participate"><div className="container registration-layout"><div className="registration-copy"><p className="eyebrow">17 · 19 · 20 · 21 ОКТЯБРЯ</p><h2>Твой выход.<br/><span>Твоя сила.</span></h2><p>Запишись на кубок.<br/>Организатор свяжется с тобой<br/>по мобильному телефону.</p><div className="registration-address"><MapPin size={20}/><div>Репаблика фитнес<small>Химки, Новогорск, Олимпийская, 15</small></div></div></div><div className="registration-card">{success?<div className="success-box" role="status"><span className="success-icon"><Check size={32}/></span><h3>Ты в списке!</h3><p>Заявка получена. Организатор свяжется с тобой по указанному телефону.</p><Button variant="outline" onClick={()=>{setSuccess(false);formRef.current?.reset();}}>Записать ещё участника</Button></div>:<><h3>Хочу участвовать</h3><p className="form-intro">Оставь свои контакты</p><form ref={formRef} onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{await register({lastName:String(f.get('lastName')),firstName:String(f.get('firstName')),phone:String(f.get('phone')),gender:f.get('gender') as 'male'|'female'});}catch{}}}><div className="form-field"><Label htmlFor="lastName">Фамилия</Label><Input id="lastName" name="lastName" autoComplete="family-name" placeholder="Иванов" required maxLength={80}/></div><div className="form-field"><Label htmlFor="firstName">Имя</Label><Input id="firstName" name="firstName" autoComplete="given-name" placeholder="Иван" required maxLength={80}/></div><div className="form-field"><Label htmlFor="gender">Категория</Label><select className="category-select" id="gender" name="gender" required defaultValue=""><option value="" disabled>Выберите категорию</option><option value="male">Мужчины</option><option value="female">Женщины</option></select></div><div className="form-field"><Label htmlFor="phone">Мобильный телефон</Label><Input id="phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+7 (___) ___-__-__" required maxLength={25}/></div>{error&&<p className="error" role="alert">{error}</p>}<Button className="form-submit" disabled={busy}>{busy?<><LoaderCircle className="spin"/>Отправляем…</>:'Участвовать в кубке'}</Button><p className="form-note">Отправляя заявку, ты разрешаешь организатору использовать эти данные для связи по вопросам кубка.</p></form></>}</div></div></section></main>
+ <section className="registration-section" id="participate"><div className="container registration-layout"><div className="registration-copy"><p className="eyebrow">17 · 19 · 20 · 21 ОКТЯБРЯ</p><h2>Твой выход.<br/><span>Твоя сила.</span></h2><p>Запишись на кубок.<br/>Организатор свяжется с тобой<br/>по мобильному телефону.</p><div className="registration-address"><MapPin size={20}/><div>Репаблика фитнес<small>Химки, Новогорск, Олимпийская, 15</small></div></div></div><div className="registration-card">{success?<div className="success-box" role="status"><span className="success-icon"><Check size={32}/></span><h3>Ты в списке!</h3><p>Заявка получена. Организатор свяжется с тобой по указанному телефону.</p><Button variant="outline" onClick={()=>{setSuccess(false);formRef.current?.reset();}}>Записать ещё участника</Button></div>:<><h3>Хочу участвовать</h3><p className="form-intro">Оставь свои контакты</p><form ref={formRef} onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget);try{await register({lastName:String(f.get('lastName')),firstName:String(f.get('firstName')),phone:String(f.get('phone')),gender:f.get('gender') as 'male'|'female'});}catch{}}}><div className="form-field"><Label htmlFor="lastName">Фамилия</Label><Input id="lastName" name="lastName" autoComplete="family-name" placeholder="Иванов" required maxLength={80}/></div><div className="form-field"><Label htmlFor="firstName">Имя</Label><Input id="firstName" name="firstName" autoComplete="given-name" placeholder="Иван" required maxLength={80}/></div><div className="form-field"><Label htmlFor="gender">Категория</Label><select className="category-select" id="gender" name="gender" required defaultValue=""><option value="" disabled>Выберите категорию</option><option value="male">Мужчины</option><option value="female">Женщины</option></select></div><div className="form-field"><Label htmlFor="phone">Мобильный телефон</Label><Input id="phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+7 (___) ___-__-__" required maxLength={25}/></div>{error&&<p className="error" role="alert">{error}</p>}<Button className="form-submit" disabled={busy}>{busy?<><LoaderCircle className="spin"/>Отправляем…</>:'Участвовать в кубке'}</Button><p className="form-note">Отправляя заявку, ты разрешаешь организатору использовать эти данные для связи по вопросам кубка.</p></form></>}</div></div></section><OverallStandings/></main>
  <footer><div className="container footer-inner"><Brand/><span>Кубок Репаблики Фитнес · Октябрь 2026</span><div className="footer-actions"><a className="organizer-button results-button" href="/results"><Trophy size={18}/>Результаты участников</a><a className="organizer-button" href="/admin"><LockKeyhole size={18}/>Кабинет организатора</a></div></div></footer></>;
 }
