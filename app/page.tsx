@@ -6,6 +6,7 @@ import {Label} from '@/components/ui/label';
 import {Accordion,AccordionItem,AccordionTrigger,AccordionContent} from '@/components/ui/accordion';
 import {Dumbbell,MapPin,Check,LockKeyhole,Trophy,LoaderCircle} from 'lucide-react';
 import Link from 'next/link';
+import {OverallResultCell} from '@/components/overall-result-cell';
 import {disciplineRows,type Gender,type ResultParticipant,type ResultField} from '@/lib/results';
 export function Brand(){return <Link href="/" className="brand"><span>РЕПАБЛИКА<span className="brand-dot">.</span></span><small>ФИТНЕС · НОВОГОРСК</small></Link>;}
 
@@ -52,7 +53,7 @@ function OverallStandings(){
      <td><span className="overall-place">{row.place??'—'}</span></td>
      <th scope="row" className="overall-name">{[row.participant.last_name,row.participant.first_name].filter(Boolean).join(' ')}<small>{row.completed?row.completed+' из 4 дисциплин':'Ожидает старта'}</small></th>
      <td className="overall-total">{row.completed?row.total:'—'}</td>
-     {disciplines.map((d,index)=><td key={d.field}><span className="overall-value">{row.participant[d.field]===null||row.participant[d.field]===undefined?'—':row.participant[d.field]!.toLocaleString('ru-RU')}</span><small>{row.points[index]} балл.</small></td>)}
+     {disciplines.map((d,index)=><td key={d.field}><OverallResultCell value={row.participant[d.field]} points={row.points[index]}/></td>)}
     </tr>)}</tbody></table></div>
     {!rows.length&&<p className="overall-empty">В этой категории пока нет участников.</p>}
    </div>;
