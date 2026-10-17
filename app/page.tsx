@@ -44,7 +44,7 @@ function OverallStandings(){
   {error&&<p className="error" role="alert">{error}</p>}
   {loading?<div className="overall-loading" role="status"><LoaderCircle className="spin" size={20}/>Загружаем общий зачёт…</div>:(['male','female'] as const).map(gender=>{
    const rows=overallRows(participants,gender);
-   const disciplines:{field:ResultField;title:string;unit:string}[]=[{field:'bench',title:'Жим лёжа',unit:'раз'},{field:gender==='male'?'pullups':'pushups',title:gender==='male'?'Подтягивания':'Отжимания',unit:'раз'},{field:'swim_seconds',title:'Плавание 50 м',unit:'с'},{field:'grip_kg',title:'Кистевая сила',unit:'кг'}];
+   const disciplines:{field:ResultField;title:string;unit:string}[]=[{field:'bench',title:'Жим лёжа',unit:'раз'},{field:gender==='male'?'pullups':'pushups',title:gender==='male'?'Подтягивания':'Отжимания',unit:'раз'},{field:'swim_seconds',title:'Плавание 50 м',unit:'мин:сек'},{field:'grip_kg',title:'Кистевая сила',unit:'кг'}];
    return <div className="overall-category" key={gender}><div className="overall-category-heading"><h3>{gender==='male'?'Мужчины':'Женщины'}</h3><span>{rows.length} участников</span></div>
     <div className="overall-table-scroll" tabIndex={0} role="region" aria-label={gender==='male'?'Общий зачёт мужчин':'Общий зачёт женщин'}>
     <table className="overall-table"><thead><tr><th scope="col">Место</th><th scope="col">Участник</th><th scope="col">Баллы</th>{disciplines.map(d=><th scope="col" key={d.field}>{d.title}<small>{d.unit}</small></th>)}</tr></thead>
@@ -52,7 +52,7 @@ function OverallStandings(){
      <td><span className="overall-place">{row.place??'—'}</span></td>
      <th scope="row" className="overall-name">{[row.participant.last_name,row.participant.first_name].filter(Boolean).join(' ')}<small>{row.completed?row.completed+' из 4 дисциплин':'Ожидает старта'}</small></th>
      <td className="overall-total">{row.completed?row.total:'—'}</td>
-     {disciplines.map((d,index)=><td key={d.field}><OverallResultCell value={row.participant[d.field]} points={row.points[index]}/></td>)}
+     {disciplines.map((d,index)=><td key={d.field}><OverallResultCell value={row.participant[d.field]} points={row.points[index]} swim={d.field==='swim_seconds'}/></td>)}
     </tr>)}</tbody></table></div>
     {!rows.length&&<p className="overall-empty">В этой категории пока нет участников.</p>}
    </div>;

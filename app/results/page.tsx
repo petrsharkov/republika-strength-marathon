@@ -10,7 +10,7 @@ import {Brand} from '@/app/page';
 export default function Results(){
  const [rows,setRows]=useState<ResultParticipant[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState('');
  const [gender,setGender]=useState<Gender>('male'),[discipline,setDiscipline]=useState('bench');
- const disciplines:{id:string;field:ResultField;title:string;unit:string}[]=[{id:'bench',field:'bench',title:'Жим штанги лёжа',unit:'раз'},{id:'body',field:gender==='male'?'pullups':'pushups',title:gender==='male'?'Подтягивания':'Отжимания от пола',unit:'раз'},{id:'swim',field:'swim_seconds',title:'Плавание — 50 м',unit:'с'},{id:'grip',field:'grip_kg',title:'Кистевая сила',unit:'кг'}];
+ const disciplines:{id:string;field:ResultField;title:string;unit:string}[]=[{id:'bench',field:'bench',title:'Жим штанги лёжа',unit:'раз'},{id:'body',field:gender==='male'?'pullups':'pushups',title:gender==='male'?'Подтягивания':'Отжимания от пола',unit:'раз'},{id:'swim',field:'swim_seconds',title:'Плавание — 50 м',unit:'мин:сек'},{id:'grip',field:'grip_kg',title:'Кистевая сила',unit:'кг'}];
  const selected=disciplines.find(d=>d.id===discipline)!;
  const [authenticated,setAuthenticated]=useState(false),[loginOpen,setLoginOpen]=useState(false),[loginBusy,setLoginBusy]=useState(false),[pending,setPending]=useState(0),[failed,setFailed]=useState(0),[editingOrder,setEditingOrder]=useState<string[]|null>(null);
  type Edit={id:string;field:ResultField;value:number|null;stamp:number};
